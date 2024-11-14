@@ -1,38 +1,38 @@
 from selenium import webdriver
 #from webdriver_manager.chrome import ChromeDriverManager
+#from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
-from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-import time
-import os
-import glob
-from pymatgen.io.vasp.inputs import Poscar
-from pymatgen.core import Structure
-from pymatgen.core.periodic_table import Species
+#from pymatgen.io.vasp.inputs import Poscar
+#from pymatgen.core import Structure
+#from pymatgen.core.periodic_table import Species
 import numpy as np
 import pprint
+import warnings
 
-main_page = "https://stokes.byu.edu/iso/isodistort.php"
-parent_structure_file = '/Users/shmr69/Documents/Brownmillerites/Ca2FeAlO5/switching/Ca2FeAlO5_Imma.cif'
-child_structure_file = '/Users/shmr69/Documents/Brownmillerites/Ca2FeAlO5/switching/CONTCAR_Ima2_unstrained_sym.cif'
+
+
+parent_structure_file : str = '/Users/shmr69/Documents/Brownmillerites/Ca2FeAlO5/switching/Ca2FeAlO5_Imma.cif'
+child_structure_file : str = '/Users/shmr69/Documents/Brownmillerites/Ca2FeAlO5/switching/CONTCAR_Ima2_unstrained_sym.cif'
 # TODO find matrix automatically using pymatgen
-basis_transformation = np.array(
+basis_transformation : np.ndarray = np.array(
     [[1, 0, 0],
     [0, 0, -1],
     [0, 1, 0]]
 )
+MAIN_PAGE = "https://stokes.byu.edu/iso/isodistort.php"
 DEBUG = True
 
 
-def wait_for_page_load(element, driver, timeout = 10) -> None:
-    #time.sleep(1)
+def wait_for_page_load(element : str, driver, timeout : float = 10) -> None:
+    '''set up built-in selenium waits until certain element can be found and is clickable'''
     try:
         wait = WebDriverWait(driver, timeout)
         element = wait.until(EC.element_to_be_clickable((By.XPATH, element)))
-        #print(f"new page has loaded: {driver.current_url}")
+        if DEBUG == True:
+            print(f"page has loaded: {driver.current_url}")
     except TimeoutException:
         print("Timed out waiting for page to load")
         driver.quit()
@@ -41,7 +41,8 @@ def wait_for_page_load(element, driver, timeout = 10) -> None:
         driver.quit()
     return None
 
-def upload_parent_struct(parent_struct, driver) -> None:
+def upload_parent_struct(parent_struct : str, driver) -> None:
+    '''uploads parent structure file to main page'''
     print('uploading parent structure file...', end="")
     upload_parent_button = driver.find_element(By.XPATH, "/html/body/div[2]/div[1]/ul/form/input[3]")
     upload_parent_button.send_keys(parent_struct) # upload parent file on first page
@@ -52,7 +53,8 @@ def upload_parent_struct(parent_struct, driver) -> None:
     print("Done!")
     return None
 
-def upload_child_struct(child_struct, driver, wait) -> None:
+def upload_child_struct(child_struct : str, driver, wait) -> None:
+    '''uploads child structure file to Method 4'''
     print('uploading child structure file...', end="")
     upload_child_button = driver.find_element(By.XPATH, '/html/body/div[2]/div[5]/form/p/input[67]')
     upload_child_button.send_keys(child_struct) # upload child file on first page 
@@ -63,7 +65,8 @@ def upload_child_struct(child_struct, driver, wait) -> None:
     wait_for_page_load("/html/body/div[2]/form/p[1]/input", driver) # wait for OK button on basis transformation page to load
     print("Done!")
 
-def transform_basis(transformation_matrix, driver) -> None:
+def transform_basis(transformation_matrix : np.ndarray, driver) -> None:
+    '''fills in the basis transformation matrix explicitly'''
     matrix = np.asarray(transformation_matrix.flatten(), dtype=str) # convert transformation matrix to 1D array of strings
     print('transforming basis...', end="")
     specify_basis_button = driver.find_element(By.XPATH, "/html/body/div[2]/form/input[71]")
@@ -82,22 +85,24 @@ def transform_basis(transformation_matrix, driver) -> None:
     return None
 
 def read_mode_amplitudes(driver) -> dict:
+    '''reads info from distortion results page, outputs info on each distortion mode and A_p mode amplitudes with labels'''
     print('reading mode amplitudes...', end="")
     text_boxes = driver.find_elements(By.CLASS_NAME, 'span1')
-    mode_amplitudes_list = []
+    mode_amplitudes : list[float] = []
     for ap in range(len(text_boxes)):
         mode_name = text_boxes[ap].get_attribute("name")
         ap_value = text_boxes[ap].get_attribute("value")
         if (("mode" in mode_name) or ("strain" in mode_name)) and (mode_name not in ['modeamplitude', 'strainamplitude']):
-            mode_amplitudes_list.append(float(ap_value))
+            mode_amplitudes.append(float(ap_value))
     
 
     paragraphs = driver.find_elements(By.TAG_NAME, 'p')
-    mode_info_paragraphs = []
-    mode_info_dict = {}
+    mode_info_paragraphs : list = []
+    results : dict = {}
     form_start = False
     for i,p in enumerate(paragraphs):
         textblock = p.text
+        # TODO output some info on paret and child structure?
         if textblock.startswith("Space Group:"):
             msg = "this is info on input structures" # first paragraph contains info on parent and child structures
             input_info = textblock.split("\n") 
@@ -130,40 +135,46 @@ def read_mode_amplitudes(driver) -> dict:
         num_components = - num_modes 
         for i,m in enumerate(mode_info_paragraphs):
             num_components += len(m)
+        if num_components != len(mode_amplitudes):
+            warnings.warn("number of A_p values read from text boxes does not match number of irrep component labels!")
+            return None
 
-    num_components = 0
+    last_component : int = 0
     for mode in mode_info_paragraphs: # extract info on distortion modes
         info_line = mode[0] # paragraphs include line info for each irrep
         mode_components = mode[1:]
-        num_components += len(mode_components)
+        last_component += len(mode_components)
+        # read irrep info from info_line
+        # TODO add some exception handling?
         parent_SG = info_line.split("[")[0]
         irrep_label = info_line.split()[0].split("]")[-1]
         child_SG = info_line.split()[3].replace(',','')
         child_SG_num = info_line.split()[2]
-        OPD = info_line.split()[1]
-        info_dict = { # dict containing info for each irrep
+        opd = info_line.split()[1]
+        info_out : dict = { # dict containing info for each irrep
                     'parent': parent_SG,
                      'child': child_SG+f" ({str(child_SG_num)})",
-                     'OPD': OPD
+                     'OPD': opd
                     }
         
-        components_dict = {}
-        for i,j in enumerate(range(num_components-len(mode_components),num_components)): # map component labels to Ap values 
-            components_dict.update({
-                mode_components[i] : mode_amplitudes_list[j]
+        components_out : dict = {}
+        for i,j in enumerate(range(last_component-len(mode_components),last_component)): # map component labels to Ap values 
+            components_out.update({
+                mode_components[i] : mode_amplitudes[j]
                 })
-        mode_info_dict.update({
+        results.update({
             irrep_label : 
-                {'info:' : info_dict,
-                 'components:' : components_dict
+                {'info:' : info_out,
+                 'components:' : components_out
                  }
                  })
 
     print("Done!")
     print(f"found {num_modes} distortion modes and {num_components} components.")
     if DEBUG == True:
-        pprint.pprint(mode_info_dict)
-    return mode_info_dict
+        pprint.pprint(results)
+
+    return results
 
 
 if __name__ == '__main__':
@@ -186,7 +197,7 @@ if __name__ == '__main__':
 
 
     # load isodistort main page
-    driver.get(main_page)
+    driver.get(MAIN_PAGE)
 
     # upload parent structure file
     upload_parent_struct(parent_structure_file, driver)
@@ -199,7 +210,6 @@ if __name__ == '__main__':
 
     # read A_p values and interal element names
     mode_amplitudes = read_mode_amplitudes(driver)
-    #print(mode_amplitudes)
 
 
     print('Press enter to close all when done')
