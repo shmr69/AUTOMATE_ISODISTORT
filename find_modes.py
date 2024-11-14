@@ -11,6 +11,8 @@ from selenium.webdriver.common.by import By
 import numpy as np
 import pprint
 import warnings
+import os
+from pathlib import Path
 
 
 
@@ -41,11 +43,25 @@ def wait_for_page_load(element : str, driver, timeout : float = 10) -> None:
         driver.quit()
     return None
 
+def file_check(filepath) -> str:
+    '''check if file is existent and if path is absolute, return full path if provided path is relative'''
+    if not os.path.isfile(filepath): # check if files exists
+        raise FileNotFoundError(f"The file {filepath.split('/')[-1]} could not be found.")
+    elif Path(filepath).is_absolute():
+        path = filepath
+        print('path is absolute')
+    else:
+        path = os.path.abspath(filepath)
+        print('path is relative')
+    print(path)
+    return path
+
 def upload_parent_struct(parent_struct : str, driver) -> None:
     '''uploads parent structure file to main page'''
+    filepath = file_check(parent_struct)
     print('uploading parent structure file...', end="")
     upload_parent_button = driver.find_element(By.XPATH, "/html/body/div[2]/div[1]/ul/form/input[3]")
-    upload_parent_button.send_keys(parent_struct) # upload parent file on first page
+    upload_parent_button.send_keys(filepath) # upload parent file on first page
     wait_for_page_load('/html/body/div[2]/div[1]/ul/form/input[2]', driver) # wait for OK button to be clickable
     OK_button_1 = driver.find_element(By.XPATH, "/html/body/div[2]/div[1]/ul/form/input[2]")
     OK_button_1.click() #click OK on first page
@@ -55,9 +71,10 @@ def upload_parent_struct(parent_struct : str, driver) -> None:
 
 def upload_child_struct(child_struct : str, driver, wait) -> None:
     '''uploads child structure file to Method 4'''
+    filepath = file_check(child_struct)
     print('uploading child structure file...', end="")
     upload_child_button = driver.find_element(By.XPATH, '/html/body/div[2]/div[5]/form/p/input[67]')
-    upload_child_button.send_keys(child_struct) # upload child file on first page 
+    upload_child_button.send_keys(filepath) # upload child file on first page 
     OK_button_2 = driver.find_element(By.XPATH, "/html/body/div[2]/div[5]/form/h3/input")
     OK_button_2.click() # click OK on second page
     wait.until(EC.number_of_windows_to_be(2)) # wait until second tab opens
@@ -80,6 +97,7 @@ def transform_basis(transformation_matrix : np.ndarray, driver) -> None:
         basis_element.send_keys(matrix[i])
 
     OK_button_3.click() # click OK on third page
+    # TODO handle case when basis is incorrect
     wait_for_page_load('/html/body/div[2]/form/input[91]', driver)
     print("Done!")
     return None
@@ -125,7 +143,7 @@ def read_mode_amplitudes(driver) -> dict:
             mode_info_paragraphs.append(textblock.split("\n"))
     
     if not mode_info_paragraphs: # check if any modes were found
-        print("WARNING: No modes found!")
+        warnings.warn("No modes found!")
         return None
     else:
         mode_info_paragraphs.pop(0) # remove the paragraph before mode info starts
@@ -203,13 +221,13 @@ if __name__ == '__main__':
     upload_parent_struct(parent_structure_file, driver)
 
     # upload distorted structure file
-    upload_child_struct(child_structure_file, driver, wait)
+    #upload_child_struct(child_structure_file, driver, wait)
 
     # transform basis
-    transform_basis(basis_transformation, driver)
+    #transform_basis(basis_transformation, driver)
 
     # read A_p values and interal element names
-    mode_amplitudes = read_mode_amplitudes(driver)
+    #mode_amplitudes = read_mode_amplitudes(driver)
 
 
     print('Press enter to close all when done')
