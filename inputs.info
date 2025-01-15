@@ -1,0 +1,29 @@
+
+# The input labels, i.e. the bits before the colon are case-insensitive but for obvious reasons,
+# the actual values themselves are case-sensitive
+
+# Enter the path to your install of chromedriver (optional)
+WEBDRIVER_PATH : /Users/shmr69/Documents/python_stuff/chromedriver-mac-x64
+
+# The link to the ISODISTORT main page (do not change)
+MAIN_PAGE : https://stokes.byu.edu/iso/isodistort.php
+
+# required input information begins here
+PARENT_FILE : /Users/shmr69/Documents/Brownmillerites/Ca2FeAlO5/switching/Ca2FeAlO5_Imma.cif
+DISTORTED_FILE : /Users/shmr69/Documents/Brownmillerites/Ca2FeAlO5/switching/CONTCAR_Ima2_unstrained_sym.cif
+BASIS_TRANSFORM : 1 0 0 0 0 -1 0 1 0
+
+# optional tags
+READ_MODE : True
+WRITE_FILE : F
+WEBDRV_WINDOW : F
+DEBUG : F
+
+SCALEMODES : T
+SCALEMODES_LABELS : GM1+ GM4-
+SCALEMODES_MIN : 0
+SCALEMODES_MAX : 1
+SCALEMODES_STEPS : 2
+DOWNLOAD_DIR : /Users/shmr69/Downloads/
+
+
