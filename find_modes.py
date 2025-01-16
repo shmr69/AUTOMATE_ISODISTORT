@@ -1,5 +1,7 @@
 import selenium # type: ignore
 print(f'Using Selenium version {selenium.__version__}')
+import sys
+print(f'Using Python version {sys.version}')
 from selenium import webdriver # type: ignore
 #from webdriver_manager.chrome import ChromeDriverManager
 #from selenium.webdriver.chrome.service import Service
@@ -11,6 +13,7 @@ from selenium.webdriver.common.by import By # type: ignore
 #from pymatgen.core import Structure
 #from pymatgen.core.periodic_table import Species
 import numpy as np # type: ignore
+print(f'Using numpy version {np.__version__}')
 import pprint
 import warnings
 import os
@@ -79,16 +82,16 @@ def save_to_file(result : dict, filename : str = 'modeamplitudes') -> None:
 
     with open(f'{filename}.yaml', 'w+') as ff:
         yaml.dump(result, ff)
-    print(f'saved results to file {filename}.yaml')
+    print(f'Saved results to file {filename}.yaml')
     return None
     
 def read_from_file(name : str) -> dict | None:
     '''reading mode amplitude dict from YAML file'''
     if not os.path.isfile(f'{name}'): # check if file exists
-        raise FileNotFoundError(f'file {name} could not be found')
+        raise FileNotFoundError(f'File {name} could not be found')
     else:   
         conf = yaml.safe_load(Path(name).read_text())
-        print(f'reading data from file {name}')
+        print(f'Reading data from file {name}')
         return conf
 
 def move_downloaded_file(downloads_dir : str, destination: str, number : int, driver, wait_time : float = 5.0) -> None:
@@ -273,7 +276,7 @@ def wait_for_page_load(element : str, driver, timeout : float = 10) -> None:
 def upload_parent_struct(parent_struct : str, driver) -> None:
     '''uploads parent structure file to main page'''
     filepath = file_check(parent_struct)
-    print('uploading parent structure file...', end="")
+    print('Uploading parent structure file...', end="")
     upload_parent_button = driver.find_element(By.XPATH, "/html/body/div[2]/div[1]/ul/form/input[3]")
     upload_parent_button.send_keys(filepath) # upload parent file on first page
     wait_for_page_load('/html/body/div[2]/div[1]/ul/form/input[2]', driver) # wait for OK button to be clickable
@@ -286,7 +289,7 @@ def upload_parent_struct(parent_struct : str, driver) -> None:
 def upload_child_struct(child_struct : str, driver, wait) -> None:
     '''uploads child structure file to Method 4'''
     filepath = file_check(child_struct)
-    print('uploading child structure file...', end="")
+    print('Uploading child structure file...', end="")
     upload_child_button = driver.find_element(By.XPATH, '/html/body/div[2]/div[5]/form/p/input[67]')
     upload_child_button.send_keys(filepath) # upload child file on first page 
     OK_button_2 = driver.find_element(By.XPATH, "/html/body/div[2]/div[5]/form/h3/input")
@@ -300,7 +303,7 @@ def upload_child_struct(child_struct : str, driver, wait) -> None:
 def transform_basis(transformation_matrix : np.ndarray, driver) -> None:
     '''fills in the basis transformation matrix explicitly'''
     matrix = np.asarray(transformation_matrix.flatten(), dtype=str) # convert transformation matrix to 1D array of strings
-    print('transforming basis...', end="")
+    print('Transforming basis...', end="")
     specify_basis_button = driver.find_element(By.XPATH, "/html/body/div[2]/form/input[71]")
     specify_basis_button.click() # click 'specify basis as' on third page
     OK_button_3 = driver.find_element(By.XPATH, "/html/body/div[2]/form/p[1]/input")
@@ -319,7 +322,7 @@ def transform_basis(transformation_matrix : np.ndarray, driver) -> None:
 
 def read_mode_amplitudes(driver) -> tuple[dict,dict]:
     '''reads info from distortion results page, outputs info on each distortion mode and A_p mode amplitudes with labels'''
-    print('reading mode amplitudes...', end="")
+    print('Reading mode amplitudes...', end="")
     text_boxes = driver.find_elements(By.CLASS_NAME, 'span1')
     mode_amplitudes : list[float] = []
     mode_names : list[str] = []
@@ -354,7 +357,7 @@ def read_mode_amplitudes(driver) -> tuple[dict,dict]:
         if DEBUG == True:
             if i == 0:
                 print("")
-            print(f"paragraph {i} ({msg})") # print statement for debugging
+            print(f"paragraph {i}: ({msg})") # print statement for debugging
 
         if form_start==True:
             mode_info_paragraphs.append(textblock.split("\n"))
@@ -371,7 +374,7 @@ def read_mode_amplitudes(driver) -> tuple[dict,dict]:
         for i,m in enumerate(mode_info_paragraphs):
             num_components += len(m)
         if num_components != len(mode_amplitudes):
-            warnings.warn("number of A_p values read from text boxes does not match number of irrep component labels!")
+            warnings.warn("Number of A_p values read from text boxes does not match number of irrep component labels!")
             return None
 
     last_component : int = 0
@@ -379,8 +382,7 @@ def read_mode_amplitudes(driver) -> tuple[dict,dict]:
         info_line = mode[0] # paragraphs include line info for each irrep
         mode_components = mode[1:] # these are the labels displayed next to the textboxes
         last_component += len(mode_components)
-        # read irrep info from info_line
-        # TODO add some exception handling?
+        # first read irrep info from info_line
         parent_SG = info_line.split("[")[0]
         irrep_label = info_line.split()[0].split("]")[-1]
         child_SG = info_line.split()[3].replace(',','')
@@ -391,7 +393,7 @@ def read_mode_amplitudes(driver) -> tuple[dict,dict]:
                      'child': child_SG+f" ({str(child_SG_num)})",
                      'OPD': opd
                     }
-        
+        # now extract the actual values
         components_out : dict = {}
         labels_out : dict = {}
         for i,j in enumerate(range(last_component-len(mode_components),last_component)): # map component labels to Ap values 
@@ -412,17 +414,47 @@ def read_mode_amplitudes(driver) -> tuple[dict,dict]:
         })
 
     print("Done!")
-    print(f"found {num_modes} distortion modes and {num_components} components.")
+    print(f"Found {num_modes} irreps ({', '.join(results.keys())}) and {num_components} components.")
     if DEBUG == True:
         pprint.pprint(results)
         pprint.pprint(labels)
 
     return (results, labels)
 
+def generate_scaled_structures(num_steps : int, factors : list, target_modes : list[str], mode_amplitudes : dict, downloads : str, destination : str, driver, wait) -> None:
+    '''uses create cif functionality on ISODISTORT to generate a range of structure files with scaled mode amplitudes and moves them to destination directory'''
+    write_cif_button = driver.find_element(By.XPATH, "/html/body/div[2]/form/input[81]")
+    OK_button_4 = driver.find_element(By.XPATH, "/html/body/div[2]/form/input[91]")
+    text_boxes = driver.find_elements(By.CLASS_NAME, 'span1')
+    print(f'Generating {num_steps} structures with scaled mode amplitudes...')
+    for i in range(num_steps):
+        if DEBUG: print(f"structure {i+1} (scaling factor: {factors[i]})")
+        # block for filling in mode amplitude text boxes
+        for ap in range(len(text_boxes)):
+            mode_name = text_boxes[ap].get_attribute("name") # internal mode label, not corresponding to label next to text boxes <--- boxlabel
+            for mode in target_modes:
+                components : dict = mode_amplitudes[mode]['components']
+                for comp in components.keys():
+                    if 'strain' not in comp:
+                        boxlabel = components[comp]['boxlabel']
+                        if mode_name == boxlabel:
+                            value = components[comp]['values'][i]
+                            if DEBUG: print(f"filling in mode amplitudes for {mode}: {comp} (boxlabel: {boxlabel}) with value {value}")
+                            text_boxes[ap].clear()
+                            text_boxes[ap].send_keys(str(value))
 
+        write_cif_button.click()
+        print(f"Creating cif no. {i+1}/{num_steps}.")
+        OK_button_4.click()
+        driver.implicitly_wait(1) # third tab will open when file downloads
+        wait.until(EC.number_of_windows_to_be(2)) # wait until third tab closes
+
+        move_downloaded_file(downloads, destination, i, driver)
+
+        return None
 
 if __name__ == '__main__':
-
+    print("")
     # read user input file
     infofile = get_usr_options()
     webdrv_path, main_page, walker_text, tags_bool, tags_other = read_usr_info(
@@ -450,7 +482,9 @@ if __name__ == '__main__':
         driver, wait = webdriver_setup(tags_bool['WEBDRV_WINDOW'], webdrv_path)
 
         # load isodistort main page
+        print('Opening ISODISTORT...', end="")
         driver.get(main_page)
+        print('Done!')
 
         # upload parent structure file
         upload_parent_struct(walker_text['PARENT_FILE'], driver)
@@ -468,8 +502,10 @@ if __name__ == '__main__':
             save_to_file(mode_amplitudes)
             save_to_file(box_labels, filename='mode_labels')
 
-        print('Press enter to close all when done')
-        input()
+        if tags_bool['WEBDRV_WINDOW']: # allow user to inspect window before closing
+            print('Press enter to close all when done')
+            input()
+
         driver.quit()
 
     elif tags_bool['READ_MODE']:
@@ -489,7 +525,7 @@ if __name__ == '__main__':
         factor_max : float = float(tags_other['SCALEMODES_MAX'])
         num_steps : int = int(tags_other['SCALEMODES_STEPS'])
         downloads : str = tags_other['DOWNLOAD_DIR']
-        destination : str = '/'.join(walker_text['PARENT_FILE'].split('/')[:-1])
+        destination : str = '/'.join(walker_text['DISTORTED_FILE'].split('/')[:-1]) # where to saved to structure files to
 
         # some sanity checks
         if factor_max < factor_min:
@@ -501,7 +537,7 @@ if __name__ == '__main__':
             target_modes : list[str] = tags_other['SCALEMODES_LABELS'].split()
 
         # create lists of scaled mode amplitudes
-        factors = np.linspace(factor_min,factor_max,num_steps)
+        factors = np.linspace(factor_min, factor_max, num_steps)
         scaled_modes : dict = {}
         for mode in target_modes:
             components : dict = mode_amplitudes[mode]['components']
@@ -528,7 +564,9 @@ if __name__ == '__main__':
         driver, wait = webdriver_setup(tags_bool['WEBDRV_WINDOW'], webdrv_path)
 
         # load isodistort main page
+        print('Opening ISODISTORT...', end="")
         driver.get(main_page)
+        print('Done!')
 
         # upload parent structure file
         upload_parent_struct(walker_text['PARENT_FILE'], driver)
@@ -539,37 +577,14 @@ if __name__ == '__main__':
         # transform basis
         transform_basis(walker_text['BASIS_TRANSFORM'], driver)
 
+        # create CIF's with scaled mode amplitudes
+        generate_scaled_structures(num_steps, factors, target_modes, mode_amplitudes, downloads, destination, driver, wait)
 
-        # in: num_steps: int, target_modes: list[str], mode_amplitudes: dict, driver, wait(?)
-        # out: 
-        write_cif_button = driver.find_element(By.XPATH, "/html/body/div[2]/form/input[81]")
-        OK_button_4 = driver.find_element(By.XPATH, "/html/body/div[2]/form/input[91]")
-        text_boxes = driver.find_elements(By.CLASS_NAME, 'span1')
+        if tags_bool['WEBDRV_WINDOW']: # allow user to inspect window before closing
+            print('Press enter to close all when done')
+            input()
 
-        for i in range(num_steps):
-            if DEBUG: print(f"structure {i+1} (scaling factor: {factors[i]})")
-            # block for filling in mode amplitude text boxes
-            for ap in range(len(text_boxes)):
-                mode_name = text_boxes[ap].get_attribute("name") # internal mode label, not corresponding to label next to text boxes <--- boxlabel
-                for mode in target_modes:
-                    components : dict = mode_amplitudes[mode]['components']
-                    for comp in components.keys():
-                        if 'strain' not in comp:
-                            boxlabel = components[comp]['boxlabel']
-                            if mode_name == boxlabel:
-                                value = components[comp]['values'][i]
-                                if DEBUG: print(f"filling in mode amplitudes for {mode}: {comp} (boxlabel: {boxlabel}) with value {value}")
-                                text_boxes[ap].clear()
-                                text_boxes[ap].send_keys(str(value))
-
-            write_cif_button.click()
-            print(f"creating cif no. {i+1}/{num_steps}.")
-            OK_button_4.click()
-            driver.implicitly_wait(1) # third tab will open when file downloads
-            wait.until(EC.number_of_windows_to_be(2)) # wait until third tab closes
-            move_downloaded_file(downloads, destination, i, driver)
-
-        print('Press enter to close all when done')
-        input()
         driver.quit()
+
+    print('All Done!')
 
