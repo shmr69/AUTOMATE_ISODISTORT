@@ -31,13 +31,13 @@ def read_from_file(name : str) -> dict:
 mode_amplitudes_dict = read_from_file('modeamplitudes.yaml')
 
 # The actual mode amplitudes are stored as a dict under the key 'components'
-GM1p_mode : dict = mode_amplitudes_dict['components']
+GM1p_mode : dict = mode_amplitudes_dict['GM1+']['components']
 
 # This also contains some extra information on each irrep such as OPD, parent and child space groups
-GM1p_info : dict = mode_amplitudes_dict['info']
+GM1p_info : dict = mode_amplitudes_dict['GM1+']['info']
 
 # Individual components can be accessed using the ISODISTORT mode labels as key
-GM1p_Al_A1 : float = GMp_mode['[Ca1:i:dsp]A''_1(a)']
+GM1p_Al_A1 : float = GM1p_mode["[Ca1:i:dsp]A'_1(a)"]
 ```
 System Requirements
 -------
