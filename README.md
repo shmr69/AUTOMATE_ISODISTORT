@@ -10,7 +10,7 @@ python find_modes.py <input-file>
 ```
 The actual name of the input file does not matter. An example input file `inputs.info` is provided. \
 \
-Note that parend and distorted structure CIF's need to be symmetrised (e.g. using [FINDSYM](https://stokes.byu.edu/iso/findsym.php) from the ISOTROPY suite). This code has some limited built-in exception handling related to errors occuring in ISODISTORT, but it is safer to first do a 'manual' test e.g. to determine the correct basis transformation matrix (see below).\
+Note that parend and distorted structure CIF's need to be symmetrised (e.g. using [FINDSYM](https://stokes.byu.edu/iso/findsym.php) from the ISOTROPY suite). Alternatively, there is a python script `symmetrise_cif.py` included which can be used to automate this step. This code has some limited built-in exception handling related to errors occuring in ISODISTORT, but it is safer to first do a 'manual' test e.g. to determine the correct basis transformation matrix (see below).\
 \
 The distortion mode amplitudes are internally stored as a Python dictionary and can (optionally) be written to a file in the `.yaml` format. This allows the values to be accessed easily using e.g. Python such as:
 ```python

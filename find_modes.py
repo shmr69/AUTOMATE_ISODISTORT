@@ -7,7 +7,7 @@ from selenium import webdriver # type: ignore
 #from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait # type: ignore
 from selenium.webdriver.support import expected_conditions as EC # type: ignore
-from selenium.common.exceptions import TimeoutException, NoSuchElementException # type: ignore
+from selenium.common.exceptions import TimeoutException, NoSuchElementException, NoSuchWindowException # type: ignore
 from selenium.webdriver.common.by import By # type: ignore
 #from pymatgen.io.vasp.inputs import Poscar
 #from pymatgen.core import Structure
@@ -295,7 +295,12 @@ def upload_child_struct(child_struct : str, driver, wait) -> None:
     OK_button_2 = driver.find_element(By.XPATH, "/html/body/div[2]/div[5]/form/h3/input")
     OK_button_2.click() # click OK on second page
     wait.until(EC.number_of_windows_to_be(2)) # wait until second tab opens
-    driver.switch_to.window(driver.window_handles[1]) # switch to second tab
+    try: 
+        driver.switch_to.window(driver.window_handles[1]) # switch to second tab
+    except NoSuchWindowException:
+        print("can't switch to second window - probably some error while uploading the child structure." )
+        driver.quit()
+        return None
     wait_for_page_load("/html/body/div[2]/form/p[1]/input", driver) # wait for OK button on basis transformation page to load
     print("Done!")
     return None
