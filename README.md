@@ -77,6 +77,9 @@ BASIS_TRANSFORM : 1 0 0 0 1 0 0 0 -1
 ```
  where the elements should be specified in order $P_{11}$ $P_{12}$ $P_{13}$ $P_{21}$  $P_{22}$  $P_{23}$  $P_{31}$ $P_{32}$ $P_{33}$ and separated by spaces. \
 \
+`ORIGIN_SHIFT` (**optional**, default: None, i.e. automatic origin detection): \
+Conventional real-space superlattice origin relative to the parent-lattice origin (in parent lattice units). The three components of the origin shift vector $\textbf{p}$ should be specified as three values sepated by spaces. ISODISTORT detects the origin automatically by default, but in some cases the origin choice might change if the child structure is perturbed, despite the parent structure being the same. This can lead to incompatible mode amplitudes between perturbed structures (in particular if polar modes are present in the child structure). In such cases one can specify a fixed origin using this tag suh that results for different child structures become compatible.\
+\
 `WRITE_FILE` (**optional**, *boolean*, default: False): \
 Write distortion mode output to a `.yaml` file. Existing files will not be overwritten, instead the new filename will be appended with a number. \
 \

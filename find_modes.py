@@ -48,6 +48,7 @@ option_tags_bool : dict = {
 }
 option_tags_other : dict = {
     # infofile optional tags (non-boolean) and default values
+    'ORIGIN_SHIFT' : None,
     'SCALEMODES_LABELS' : None,
     'SCALEMODES_MIN' : 0,
     'SCALEMODES_MAX' : 1,
@@ -226,7 +227,12 @@ def read_usr_info(filename : str,  tags_text : list[str] = text_tags, tags_bool 
         if usr_value_o == None:
             warnings.warn(f"invalid input value for {opt_tag_o}: {usr_value_o}. Falling back to default value ({tags_other[opt_tag_o]}).")
             continue
-        else: 
+        else:
+            if opt_tag_o == 'ORIGIN_SHIFT':
+                origin_arr = np.array(list(map(float, usr_value_o.split()))) # generate 1x3 numpy array from input
+                if origin_arr is not None and len(origin_arr) != 3:
+                    raise KeyError(f"{usr_value_o} is not a valid origin shift")
+                usr_value_o = origin_arr
             tags_other.update({
                 opt_tag_o : usr_value_o
                 })
@@ -292,7 +298,7 @@ def upload_child_struct(child_struct : str, driver, wait) -> None:
     print('Uploading child structure file...', end="")
     upload_child_button = driver.find_element(By.XPATH, '/html/body/div[2]/div[5]/form/p/input[67]')
     upload_child_button.send_keys(filepath) # upload child file on first page 
-    OK_button_2 = driver.find_element(By.XPATH, "/html/body/div[2]/div[5]/form/h3/input")
+    OK_button_2 = driver.find_element(By.XPATH, "/html/body/div[2]/div[5]/form/h3/input") 
     OK_button_2.click() # click OK on second page
     wait.until(EC.number_of_windows_to_be(2)) # wait until second tab opens
     try: 
@@ -305,7 +311,7 @@ def upload_child_struct(child_struct : str, driver, wait) -> None:
     print("Done!")
     return None
 
-def transform_basis(transformation_matrix : np.ndarray, driver) -> None:
+def transform_basis(transformation_matrix : np.ndarray, origin_shift : None|np.ndarray, driver) -> None:
     '''fills in the basis transformation matrix explicitly'''
     matrix = np.asarray(transformation_matrix.flatten(), dtype=str) # convert transformation matrix to 1D array of strings
     print('Transforming basis...', end="")
@@ -318,6 +324,17 @@ def transform_basis(transformation_matrix : np.ndarray, driver) -> None:
         basis_element = driver.find_element(By.XPATH, f"/html/body/div[2]/form/input[{el}]") # textbox for matrix element in basis transformation matrix
         basis_element.clear()
         basis_element.send_keys(matrix[i])
+
+    # fill origin shift if requested    
+    if origin_shift is not None:
+        print("Done!")
+        print('Shifting origin...', end="")
+        specify_origin_button = driver.find_element(By.XPATH, "/html/body/div[2]/form/input[82]")
+        specify_origin_button.click()
+        for i,x in enumerate(range(83,86)):
+            origin_element = driver.find_element(By.XPATH, f"/html/body/div[2]/form/input[{x}]")
+            origin_element.clear()
+            origin_element.send_keys(str(origin_shift[i]))
 
     OK_button_3.click() # click OK on third page
     # TODO handle case when basis is incorrect
@@ -498,7 +515,9 @@ if __name__ == '__main__':
         upload_child_struct(walker_text['DISTORTED_FILE'], driver, wait)
 
         # transform basis
-        transform_basis(walker_text['BASIS_TRANSFORM'], driver)
+        origin = tags_other['ORIGIN_SHIFT']
+        if DEBUG and origin is not None: print(f'\norigin shifted by ({origin[0]})a + ({origin[1]})b + ({origin[2]})c')
+        transform_basis(walker_text['BASIS_TRANSFORM'], origin, driver)
 
         # read A_p values and interal element names
         mode_amplitudes, box_labels = read_mode_amplitudes(driver)
