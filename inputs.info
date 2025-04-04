@@ -12,14 +12,15 @@ MAIN_PAGE : https://stokes.byu.edu/iso/isodistort.php
 PARENT_FILE : /Users/shmr69/Documents/Brownmillerites/Ca2FeAlO5/switching/Ca2FeAlO5_Imma.cif
 DISTORTED_FILE : /Users/shmr69/Documents/Brownmillerites/Ca2FeAlO5/switching/CONTCAR_Ima2_unstrained_sym.cif
 BASIS_TRANSFORM : 1 0 0 0 0 -1 0 1 0
+# ORIGIN_SHIFT : -0.25 0.2496 -0.25
 
 # optional tags
-READ_MODE : T
+READ_MODE : F
 WRITE_FILE : F
 WEBDRV_WINDOW : F
-DEBUG : F
+DEBUG : T
 
-SCALEMODES : T
+SCALEMODES : F
 SCALEMODES_LABELS : GM1+ GM4-
 SCALEMODES_MIN : 0
 SCALEMODES_MAX : 1
